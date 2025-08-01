@@ -15,9 +15,10 @@ interface SearchBarProps {
   onLocationSelect: (location: { lat: number; lng: number; address: string; name: string }) => void
   currentLocation?: { lat: number; lng: number } | null
   showLocateButton?: boolean
+  hasSelectedLocation?: boolean
 }
 
-const SearchBar = ({ onLocationSelect, currentLocation, showLocateButton = false }: SearchBarProps) => {
+const SearchBar = ({ onLocationSelect, currentLocation, showLocateButton = false, hasSelectedLocation = false }: SearchBarProps) => {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -122,7 +123,8 @@ const SearchBar = ({ onLocationSelect, currentLocation, showLocateButton = false
   }
 
   const handleInputFocus = () => {
-    if (query.length === 0 && recentSearches.length > 0) {
+    // Only show recent searches if no location is selected and query is empty
+    if (query.length === 0 && recentSearches.length > 0 && !hasSelectedLocation) {
       setShowResults(true)
     }
   }

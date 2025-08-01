@@ -601,6 +601,7 @@ const NavigationPanel = ({ map, onClose, currentLocation }: NavigationPanelProps
               onLocationSelect={setOrigin}
               currentLocation={currentLocation}
               showLocateButton={true}
+              hasSelectedLocation={!!origin}
             />
             {origin && (
               <div className="mt-1 text-sm text-gray-600 truncate">
@@ -629,6 +630,7 @@ const NavigationPanel = ({ map, onClose, currentLocation }: NavigationPanelProps
               onLocationSelect={setDestination}
               currentLocation={currentLocation}
               showLocateButton={false}
+              hasSelectedLocation={!!destination}
             />
             {destination && (
               <div className="mt-1 text-sm text-gray-600 truncate">
