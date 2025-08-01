@@ -53,6 +53,20 @@ const TrafficSignalOverlay = ({ map, currentLocation }: TrafficSignalOverlayProp
 
     fetchTrafficSignals()
     
+    return () => {
+      clearSignalsFromMap()
+    }
+  }, [map, currentLocation])
+
+  // Separate effect for timer - runs once after signals are created
+  useEffect(() => {
+    if (trafficSignals.length === 0) return
+
+    // Clear any existing interval first
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
     // Update signal states every second
     intervalRef.current = setInterval(() => {
       updateSignalStates()
@@ -62,9 +76,8 @@ const TrafficSignalOverlay = ({ map, currentLocation }: TrafficSignalOverlayProp
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
-      clearSignalsFromMap()
     }
-  }, [map, currentLocation])
+  }, [trafficSignals.length > 0]) // Only restart when signals are first created
 
   // Update visual elements when signal states change
   useEffect(() => {
