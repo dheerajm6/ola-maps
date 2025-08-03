@@ -13,6 +13,34 @@ const MapContainer = () => {
   const [showSearch, setShowSearch] = useState(true)
   const [showNavigation, setShowNavigation] = useState(false)
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [webglError, setWebglError] = useState<string | null>(null)
+
+  // Check WebGL support
+  const checkWebGLSupport = (): boolean => {
+    try {
+      const canvas = document.createElement('canvas')
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+      
+      if (!gl) {
+        setWebglError('WebGL is not supported on this device/browser')
+        return false
+      }
+      
+      // Check for required WebGL extensions
+      const requiredExtensions = ['OES_element_index_uint']
+      for (const ext of requiredExtensions) {
+        if (!gl.getExtension(ext)) {
+          setWebglError(`Required WebGL extension ${ext} is not supported`)
+          return false
+        }
+      }
+      
+      return true
+    } catch (error) {
+      setWebglError('Error checking WebGL support: ' + (error as Error).message)
+      return false
+    }
+  }
 
   const apiKey = import.meta.env.VITE_OLA_MAPS_API_KEY
   const defaultCenter = [
@@ -26,18 +54,28 @@ const MapContainer = () => {
 
     const initializeMap = async () => {
       try {
+        // Check WebGL support before initializing map
+        if (!checkWebGLSupport()) {
+          console.error('WebGL not supported, cannot initialize map')
+          return
+        }
+
         // Initialize Ola Maps instance
         const olaMaps = new OlaMaps({ apiKey })
 
         // Use default style instead of fetching styles list
         const defaultStyle = 'default'
 
-        // Initialize map
+        // Initialize map with fallback options
         const map = olaMaps.init({
           styleName: defaultStyle,
           container: mapContainerRef.current,
           center: defaultCenter,
-          zoom: defaultZoom
+          zoom: defaultZoom,
+          // Add WebGL fallback options
+          failIfMajorPerformanceCaveat: false,
+          preserveDrawingBuffer: false,
+          antialias: false
         })
 
         // Add geolocation control
@@ -77,6 +115,14 @@ const MapContainer = () => {
 
       } catch (error) {
         console.error('Error initializing map:', error)
+        
+        // Check if it's a WebGL-related error
+        const errorMessage = (error as Error).message
+        if (errorMessage.includes('WebGL') || errorMessage.includes('webgl')) {
+          setWebglError('Failed to initialize WebGL context. Your device or browser may not support WebGL.')
+        } else {
+          setWebglError(`Map initialization failed: ${errorMessage}`)
+        }
       }
     }
 
@@ -195,8 +241,29 @@ const MapContainer = () => {
         </button>
       </div>
 
+      {/* WebGL Error Message */}
+      {webglError && (
+        <div className="absolute inset-0 z-20 bg-white flex items-center justify-center">
+          <div className="text-center max-w-md mx-4">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <h3 className="font-bold text-lg mb-2">Map Not Available</h3>
+              <p className="text-sm">{webglError}</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded">
+              <h4 className="font-semibold mb-2">Solutions:</h4>
+              <ul className="text-sm text-left space-y-1">
+                <li>• Update your browser to the latest version</li>
+                <li>• Enable hardware acceleration in browser settings</li>
+                <li>• Try a different browser (Chrome, Firefox, Safari)</li>
+                <li>• Check if WebGL is disabled in your browser</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loading Indicator */}
-      {!isMapLoaded && (
+      {!isMapLoaded && !webglError && (
         <div className="absolute inset-0 z-20 bg-white bg-opacity-90 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ola-green mx-auto mb-4"></div>
