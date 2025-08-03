@@ -15,23 +15,42 @@ const MapContainer = () => {
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null)
   const [webglError, setWebglError] = useState<string | null>(null)
 
-  // Check WebGL support
+  // Check WebGL support with detailed diagnostics
   const checkWebGLSupport = (): boolean => {
     try {
       const canvas = document.createElement('canvas')
       const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
       
-      if (!gl || !(gl instanceof WebGLRenderingContext)) {
-        setWebglError('WebGL is not supported on this device/browser')
+      if (!gl) {
+        setWebglError('WebGL context could not be created. Check if hardware acceleration is enabled in browser settings.')
         return false
       }
       
-      // Check for required WebGL extensions
+      if (!(gl instanceof WebGLRenderingContext)) {
+        setWebglError('Invalid WebGL context type detected')
+        return false
+      }
+
+      // Get WebGL info for diagnostics
+      const renderer = gl.getParameter(gl.RENDERER)
+      const vendor = gl.getParameter(gl.VENDOR)
+      const version = gl.getParameter(gl.VERSION)
+      
+      console.log('WebGL Info:', { renderer, vendor, version })
+      
+      // Check if using software rendering (SwiftShader)
+      if (renderer && renderer.includes('SwiftShader')) {
+        console.warn('WebGL is using software rendering (SwiftShader). Performance may be limited.')
+        // Allow software rendering but log warning
+      }
+      
+      // Check for required WebGL extensions (make optional for now)
       const requiredExtensions = ['OES_element_index_uint']
       for (const ext of requiredExtensions) {
-        if (!gl.getExtension(ext)) {
-          setWebglError(`Required WebGL extension ${ext} is not supported`)
-          return false
+        const extension = gl.getExtension(ext)
+        if (!extension) {
+          console.warn(`WebGL extension ${ext} is not supported, but continuing anyway`)
+          // Don't fail for missing extensions, just warn
         }
       }
       
@@ -72,10 +91,13 @@ const MapContainer = () => {
           container: mapContainerRef.current,
           center: defaultCenter,
           zoom: defaultZoom,
-          // Add WebGL fallback options
-          failIfMajorPerformanceCaveat: false,
-          preserveDrawingBuffer: false,
-          antialias: false
+          // WebGL fallback options for better compatibility
+          failIfMajorPerformanceCaveat: false, // Allow software rendering
+          preserveDrawingBuffer: false,       // Better performance
+          antialias: false,                   // Better compatibility
+          alpha: false,                       // Better performance
+          stencil: false,                     // Better compatibility
+          depth: true                         // Required for 3D rendering
         })
 
         // Add geolocation control
